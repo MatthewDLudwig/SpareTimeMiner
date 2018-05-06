@@ -1,4 +1,6 @@
 package main;
+import javax.sound.sampled.LineUnavailableException;
+
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
 import org.jnativehook.mouse.NativeMouseEvent;
@@ -53,18 +55,40 @@ public class GlobalListener implements NativeKeyListener, NativeMouseInputListen
 			}
 		}
 		
-		if (number != 0) {
-			if (this.exitTracker.checkCurrent(number)) {
-				Main.running = false;
+		try {
+			if (number != 0) {
+				if (this.exitTracker.checkCurrent(number)) {
+					Main.running = false;
+	
+					if (Main.beepLevel > 1) {
+						Main.playSound(300, 150, 100);
+						Main.playSound(500, 150, 100);
+						Main.playSound(300, 150, 100);
+					}
+				}
+				
+				if (this.movieTracker.checkCurrent(number)) {
+					this.movieMode = !this.movieMode;
+	
+					if (Main.beepLevel > 1) {
+						Main.playSound(500, 150, 100);
+						Main.playSound(500, 150, 100);
+						Main.playSound(300, 150, 100);
+					}
+				}
+				
+				if (this.forceTracker.checkCurrent(number)) {
+					Main.forceCheck = true;
+	
+					if (Main.beepLevel > 1) {
+						Main.playSound(400, 150, 100);
+						Main.playSound(250, 150, 100);
+						Main.playSound(600, 150, 100);						
+					}
+				}
 			}
-			
-			if (this.movieTracker.checkCurrent(number)) {
-				this.movieMode = !this.movieMode;
-			}
-			
-			if (this.forceTracker.checkCurrent(number)) {
-				Main.forceCheck = true;
-			}
+		} catch (LineUnavailableException err) {
+			err.printStackTrace();
 		}
 		
 		counter++;

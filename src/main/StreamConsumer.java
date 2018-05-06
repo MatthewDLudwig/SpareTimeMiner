@@ -76,6 +76,8 @@ class StreamConsumer extends Thread {
                 	break;
                 }
             }
+            
+            br.close();
         } catch (IOException ioe) {
             ioe.printStackTrace();  
         }

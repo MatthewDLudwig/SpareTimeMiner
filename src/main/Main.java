@@ -10,15 +10,40 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+
 import org.jnativehook.GlobalScreen;
 import org.jnativehook.NativeHookException;
 
 public class Main {
 	public static boolean running = true;
 	public static boolean forceCheck = false;
+	public static int beepLevel = 2;
 	
 	private static Process minerProcess;
 	private static StreamConsumer consumer;
+	
+	public static void playSound(float hz, float time, float volume) throws LineUnavailableException {
+		float frequency = 44100;
+		byte[] buf = new byte[1];
+	    AudioFormat af = new AudioFormat(frequency, 8, 1, true, false);
+	    SourceDataLine sdl = AudioSystem.getSourceDataLine(af);
+	    
+	    sdl.open();
+	    sdl.start();
+	    for (int i = 0; i < 250 * frequency / 1000; i++) {
+	        double angle = i / (frequency / hz) * 2.0 * Math.PI;
+	        buf[0] = (byte) (Math.sin(angle) * volume);
+
+	        sdl.write(buf, 0, 1);
+	    }
+	    sdl.drain();
+	    sdl.stop();
+	}
+	
 	
 	public static void runCommand(Runtime r, String command) throws IOException, InterruptedException {
 		TimeUnit.SECONDS.sleep(5);
@@ -29,7 +54,9 @@ public class Main {
 		consumer.start();
 	}
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws LineUnavailableException {	  
+        playSound(500, 150, 0);
+
 		String[] modeStrings = { "Tiny", "Light", "Heavy" };
 		
 		String tinyCommand = "", lightCommand = "", heavyCommand = "";
@@ -58,7 +85,20 @@ public class Main {
             		String key = parts[0].trim();
             		String value = parts[1].trim();
             		
-            		if (key.equals("tiny")) {
+            		if (key.equals("beeps")) {
+            			if (value.equals("0") || value.equalsIgnoreCase("none")) {
+            				Main.beepLevel = 0;
+            			} else if (value.equals("1") || value.equalsIgnoreCase("onoff")) {
+            				Main.beepLevel = 1;
+            			} else if (value.equals("2") || value.equalsIgnoreCase("some")) {
+            				Main.beepLevel = 2;
+            			} else if (value.equals("3") || value.equalsIgnoreCase("all")) {
+            				Main.beepLevel = 3;
+            			} else {
+            				System.err.println("Unrecognized value for key 'beeps': " + value);
+            				throw new IOException();
+            			}
+            		} else if (key.equals("tiny")) {
             			tinyCommand = value;
             		} else if (key.equals("light")) {
             			lightCommand = value;
@@ -108,6 +148,8 @@ public class Main {
             		}
             	}
             }
+            
+            configReader.close();
 		} catch (FileNotFoundException e) {
 			System.err.println("No config file found, please ensure that SpareMiner.config is in the same folder as the jar file.");
 			System.exit(-1);
@@ -123,8 +165,13 @@ public class Main {
 				
 		try {
 			Runtime r = Runtime.getRuntime();
-			
-			Process findMiner = r.exec("tasklist.exe");
+			Process findMiner;
+
+		    if (System.getProperty("os.name").startsWith("Windows")) {
+			    findMiner = r.exec("tasklist.exe");
+		    } else {
+		    	findMiner = r.exec("ps -aux");
+		    }
             BufferedReader minerReader = new BufferedReader(new InputStreamReader(findMiner.getInputStream()));
             String minerLine = null;
             while ( (minerLine = minerReader.readLine()) != null) {
@@ -134,7 +181,15 @@ public class Main {
             		System.exit(-3);
             	}
             }
-			
+
+            minerReader.close();
+            
+            if (Main.beepLevel > 0) {
+            	playSound(400, 150, 100);
+            	playSound(500, 150, 100);
+            	playSound(600, 150, 100);            	
+            }
+
 			Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
 			logger.setUseParentHandlers(false);
 			logger.setLevel(Level.WARNING);
@@ -149,7 +204,6 @@ public class Main {
 			while (Main.running) {
 				System.out.println("{ " + modeStrings[currentMode] + " " + sleepCounter + "/" + recheckFrequency + " } - " + consumer.currentDescription());
 				cumulativeHashRate.updateAverage(consumer.getAverageRate());
-
 				TimeUnit.SECONDS.sleep(15);
 				sleepCounter++;
 				
@@ -163,6 +217,12 @@ public class Main {
 					if (count < recheckFrequency) { //Less than 1 input every 15 seconds is considered AFK or close enough.
 						if (currentMode != 2) {
 							System.out.println("{ STATUS } Switching to heavy miner!");
+
+				            if (Main.beepLevel > 2) {
+				            	playSound(150, 150, 100);
+				            	playSound(150, 150, 100);
+				            	playSound(150, 150, 100);            	
+				            }
 							
 							currentMode = 2;
 							consumer.shouldStop = true;						
@@ -174,6 +234,12 @@ public class Main {
 						if (currentMode != 1) {
 							System.out.println("{ STATUS } Switching to light miner!");
 
+				            if (Main.beepLevel > 2) {
+				            	playSound(500, 150, 100);
+				            	playSound(500, 150, 100);
+				            	playSound(500, 150, 100);            	
+				            }
+
 							currentMode = 1;
 							consumer.shouldStop = true;
 							minerProcess.destroy();
@@ -183,6 +249,12 @@ public class Main {
 					} else { //Anything above 3/4 of the average is considered heavy use of the computer and so the miner is turned down.
 						if (currentMode != 0) {
 							System.out.println("{ STATUS } Switching to tiny miner!");
+
+				            if (Main.beepLevel > 2) {
+				            	playSound(700, 150, 100);
+				            	playSound(700, 150, 100);
+				            	playSound(700, 150, 100);            	
+				            }
 
 							currentMode = 0;						
 							consumer.shouldStop = true;
@@ -209,5 +281,11 @@ public class Main {
 		System.out.println("SpareMiner stopped with stats:");
 		System.out.println("\tAverage interactions: " + lastAverage);
 		System.out.println("\tAverage hash rate: " + cumulativeHashRate.getAverage());
+
+		if (Main.beepLevel > 0) {
+			playSound(600, 150, 100);
+			playSound(500, 150, 100);
+			playSound(400, 150, 100);			
+		}
 	}
 }
