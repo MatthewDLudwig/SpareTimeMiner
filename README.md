@@ -104,3 +104,11 @@ A sample config file is included in this repository without the light, heavy, or
   * The average hash rate is printed since the rates the 3 modes give should be different, and the overall rate is a useful statistic.
 ### Tracking Mouse and Key Input
 Using the Java Native Hook library, key and mouse presses can be listened to even when the Java application isn't the active window.  These key presses are not recorded or sent anywhere and the frequency is all that is recorded.  Average interactions (a key press or mouse click) are recorded along with the number of clicks done in a certain timeframe.
+### Donations
+If you feel like throwing something of value my way it would be greatly appreciated.  Use of this program does not require a donation of any sort and is absolutely free to use.  To donate you can:
+* Send NIM to:
+  * NQ89 54KX U06J 5S88 LC2Q V684 EESA KXS2 L984
+* Send ETH or tokens to:
+  * 0x844a2Fcbc127980b158a04c054A22545a6f44c50
+### License
+The "GNU GPLv3" license was chosen for this project so that future improvements must be open source.  If there is significant interest in changing the license to the "MIT" license or some even less restricting license I would consider it.  Requests can be submitted as issues or you can reach me at matthew.ludwig@drawpad.org
