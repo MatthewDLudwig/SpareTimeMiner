@@ -3,9 +3,9 @@ The SpareTimerMiner (STM) is a Java program that controls the launching and clos
 
 ## The 3 Modes
 ### Tiny Mode
-Tiny mode is turned on when the user has interacted with the computer more than 3/4 of the average.  The command for tiny mode should use the least amount of resources compared to the other two commands.  Tiny mode will always be the result of a mode recheck (manual or automatic) if movie mode is on.
+Tiny mode is turned on when the user has interacted with the computer more than the average.  The command for tiny mode should use the least amount of resources compared to the other two commands.  Tiny mode will always be the result of a mode recheck (manual or automatic) if movie mode is on.
 ### Light Mode
-Light mode is turned on when the user has interacted with the computer less than 3/4 of the average, but more than once every 15 seconds.  The command for light mode should allow for your computer to run normally without affecting your normal use and while still providing a decent hash rate.  The final decision for what the command should do is up to the end user though.
+Light mode is turned on when the user has interacted with the computer less than the average, but more than once every 15 seconds.  The command for light mode should allow for your computer to run normally without affecting your normal use and while still providing a decent hash rate.  The final decision for what the command should do is up to the end user though.
 ### Heavy Mode
 Heavy mode is turned on when the user has interacted with the computer less than once every 15 seconds.  This mode is mainly meant for computers that don't go to sleep after prolonged lack of use so that the miner can use more resources.  The main reason STM was created was for this exact reason as I had grown tired of changing the miner program manually before bed and when waking up.
 

@@ -230,7 +230,7 @@ public class Main {
 							
 							runCommand(r, heavyCommand);
 						}
-					} else if (count < (lastAverage * 3) / 4) { //Less than 3/4 of average is considered light use.
+					} else if (count < lastAverage) { //Less than the average is considered light use.
 						if (currentMode != 1) {
 							System.out.println("{ STATUS } Switching to light miner!");
 
@@ -246,7 +246,7 @@ public class Main {
 							
 							runCommand(r, lightCommand);
 						}
-					} else { //Anything above 3/4 of the average is considered heavy use of the computer and so the miner is turned down.
+					} else { //Anything above the average is considered heavy use of the computer and so the miner is turned down.
 						if (currentMode != 0) {
 							System.out.println("{ STATUS } Switching to tiny miner!");
 
