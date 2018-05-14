@@ -64,6 +64,7 @@ public class Main {
 		int[] comboExit = {3, 6, 9};
 		int[] comboMovie = {7, 8, 9};
 		int[] comboForce = {1, 2, 3};
+		int counterTime = 15;
 		
 		int currentMode = 0;
 		int interactionBias = 60;
@@ -143,6 +144,8 @@ public class Main {
                     		interactionBias = Integer.parseInt(pieces[0].trim());
                     		biasStrength = Integer.parseInt(pieces[1].trim());
                     	}
+            		} else if (key.equals("counter")) {
+                		counterTime = Integer.parseInt(value);
             		} else {
             			System.err.println("Unrecognized key: '" + key + "'");
             		}
@@ -162,6 +165,8 @@ public class Main {
 			System.err.println("Config file is missing one of the 3 required miner commands (tiny, light, or heavy).");
 			System.exit(-2);
 		}
+		
+		String[] allCommands = new String[]{ tinyCommand, lightCommand, heavyCommand };
 				
 		try {
 			Runtime r = Runtime.getRuntime();
@@ -204,7 +209,7 @@ public class Main {
 			while (Main.running) {
 				System.out.println("{ " + modeStrings[currentMode] + " " + sleepCounter + "/" + recheckFrequency + " } - " + consumer.currentDescription());
 				cumulativeHashRate.updateAverage(consumer.getAverageRate());
-				TimeUnit.SECONDS.sleep(15);
+				TimeUnit.SECONDS.sleep(counterTime);
 				sleepCounter++;
 				
 				if (forceCheck || sleepCounter >= recheckFrequency) {
@@ -215,7 +220,7 @@ public class Main {
 					lastAverage = ex.getAverage();
 					
 					if (count < recheckFrequency) { //Less than 1 input every 15 seconds is considered AFK or close enough.
-						if (currentMode != 2) {
+						if (currentMode != 2 && !allCommands[currentMode].equals(allCommands[2])) {
 							System.out.println("{ STATUS } Switching to heavy miner!");
 
 				            if (Main.beepLevel > 2) {
@@ -231,7 +236,7 @@ public class Main {
 							runCommand(r, heavyCommand);
 						}
 					} else if (count < lastAverage) { //Less than the average is considered light use.
-						if (currentMode != 1) {
+						if (currentMode != 1 && !allCommands[currentMode].equals(allCommands[1])) {
 							System.out.println("{ STATUS } Switching to light miner!");
 
 				            if (Main.beepLevel > 2) {
@@ -247,7 +252,7 @@ public class Main {
 							runCommand(r, lightCommand);
 						}
 					} else { //Anything above the average is considered heavy use of the computer and so the miner is turned down.
-						if (currentMode != 0) {
+						if (currentMode != 0 && !allCommands[currentMode].equals(allCommands[0])) {
 							System.out.println("{ STATUS } Switching to tiny miner!");
 
 				            if (Main.beepLevel > 2) {

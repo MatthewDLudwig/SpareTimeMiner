@@ -96,6 +96,9 @@ A sample config file is included in this repository without the light, heavy, or
     * The tone for "light" is at 500 Hz and may be recognized from the start up / shut down tones.
   * This mode is my personal favorite as I like to know when I switch modes.
     * While still finding a good value for bias, it's useful to know when you switch from light to tiny.
+### counter
+* This value controls the how often the program refreshes and prints output.
+* The default value is 15 seconds and with the default value of frequency this leads to a miner recheck every 5 minutes.
 
 ## Miscellaneous Information
 * This program will record the current hash rate and print statistics to the console every 15 seconds.  

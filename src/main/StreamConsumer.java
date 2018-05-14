@@ -49,26 +49,33 @@ class StreamConsumer extends Thread {
             	if (hashRate != -1) {
             		int endIndex = line.indexOf(' ', hashRate + hashCheck.length());
             		String part = line.substring(hashRate + hashCheck.length(), endIndex == -1 ? line.length() - 1 : endIndex);
-            		float value = Float.parseFloat(part);
-            		averageRate.updateAverage(value);
+            		if (part.matches("[0-9]{1,10}")) {
+            			float value = Float.parseFloat(part);
+            			averageRate.updateAverage(value);            			
+            		}
             	}
             	
             	if (balance != -1) {
             		int endIndex = line.indexOf(' ', balance + balanceCheck.length());
             		String part = line.substring(balance + balanceCheck.length(), endIndex == -1 ? line.length() - 1 : endIndex);
-            		float value = Float.parseFloat(part);
-            		currentBalance = value;
+            		if (part.matches("[0-9]{1,10}")) {
+	            		float value = Float.parseFloat(part);
+	            		currentBalance = value;
+            		}
             	}
             	
             	if (block != -1) {
             		int endIndex = line.indexOf(' ', block + blockCheck.length());
             		String part = line.substring(block + blockCheck.length(), endIndex == -1 ? line.length() - 1 : endIndex);
-            		int value = Integer.parseInt(part);
-            		if (currentBlock == 0) {
-            			currentBlock = value;
-            		} else if (currentBlock != value) {
-            			blocksPassed += (value - currentBlock);
-            			currentBlock = value;
+            		
+            		if (part.matches("[0-9]{1,10}")) {
+	            		int value = Integer.parseInt(part);
+	            		if (currentBlock == 0) {
+	            			currentBlock = value;
+	            		} else if (currentBlock != value) {
+	            			blocksPassed += (value - currentBlock);
+	            			currentBlock = value;
+	            		}
             		}
             	}
 
