@@ -1,5 +1,5 @@
 # SpareTimeMiner
-The SpareTimerMiner (STM) is a Java program that controls the launching and closing of Nimiq Miners as deemed necessary based on Key and Mouse input.  Three possible modes can be used each ideally using more resources; tiny, light, and heavy.  The commands to run for each mode are provided in the config file and so different miners can be used, or other settings past thread count can be changed to provide optimum performance in each of the three situations.
+The SpareTimerMiner (STM) is a Java program that controls the launching and closing of Nimiq Miners as deemed necessary based on either user activity or the time of day.  Three possible modes can be used each ideally using more resources; tiny, light, and heavy.  The commands to run for each mode are provided in the config file and so different miners can be used, or other settings past thread count can be changed to provide optimum performance in each of the three situations.
 
 ## The 3 Modes
 ### Tiny Mode
@@ -9,6 +9,13 @@ Light mode is turned on when the user has interacted with the computer less than
 ### Heavy Mode
 Heavy mode is turned on when the user has interacted with the computer less than once every 15 seconds.  This mode is mainly meant for computers that don't go to sleep after prolonged lack of use so that the miner can use more resources.  The main reason STM was created was for this exact reason as I had grown tired of changing the miner program manually before bed and when waking up.
 
+## Recheck Modes
+### Activity Mode
+Activity mode should be used when you want the mining command to be chosen based off how actively you are using your computer.  This is good for those playing video games or who constantly switch between typing a lot, and barely using the computer.
+### Time Mode
+Time mode should be used when you want the mining command to be chosen based off the time of day and not off how the computer is being used.  Heavy, light, and tiny modes can be specified for different times or the day (days of the week may be implemented at a later point).  If a time slot is not specified, the "light" command will be used for that time of day.
+
+Overlapping times will use the first specified mode in the config file.  This may not be true if the collection used (LinkedList) doesn't keep the order of items as they were added (shouldn't happen though).
 ## The Config File
 A sample config file is included in this repository without the light, heavy, or tiny commands present.  If these commands are not present the program will fail to start while printing an error.  A description of each config field is provided below:
 
@@ -66,12 +73,12 @@ A sample config file is included in this repository without the light, heavy, or
   * Lower values will lead to the bias making little difference.
 * Bias values are dependent on the user but some recommendations are made below:
   * 200 is good for average use and slow typing.
-    * This is a good bias for programming involving long bouts of though inbetween typing.
+    * This is a good bias for programming involving long bouts of thought between typing.
   * 600 is good for typing large amounts quickly.
     * Prior to writing the updated version of this readme I was using 200 as my bias.
     * I was in "tiny" mode the whole time and would have preferred "light" as typing text isn't incredibly intensive.
     * By the end my average was around 600 and "tiny" mode was still the mode of choice for the program.
-      * For those writing text often a larger value around 800 may be better.
+      * For those writing text often, a larger value around 800 may be better.
 ### beeps
 * This field is similar to a logging mode field.
 * Possible values are "none", "onoff", "some", and "all".
@@ -99,10 +106,21 @@ A sample config file is included in this repository without the light, heavy, or
 ### counter
 * This value controls the how often the program refreshes and prints output.
 * The default value is 15 seconds and with the default value of frequency this leads to a miner recheck every 5 minutes.
+### check
+* This value specifies what should be checked to determine which miner command to run.
+* Possible values are "activity" and "time" with the default being "activity".
+### times
+* This value specifies the times that each miner command should be run if in "time" mode.
+* All times should be listed with commas between them.
+* The expected format is "(tiny|light|heavy)-(STARTTIME)-(ENDTIME)" all without parenthesis.
+  * STARTTIME and ENDTIME should be in 24-hour format and just specify hour and minutes.
+  * An error will occur if ENDTIME is less than STARTTIME so for mining past midnight you must split it into two times.
+  * Sample config file shows all of this.
 
 ## Miscellaneous Information
 * This program will record the current hash rate and print statistics to the console every 15 seconds.  
-* Upon exitting, the program will print the final average number of interactions.
+* Upon exiting, the program will print the final average number of interactions.
+  * This average will not be printed if in "Time" mode.
   * The average hash rate over the whole time the program was running will also be printed.
   * The average hash rate is printed since the rates the 3 modes give should be different, and the overall rate is a useful statistic.
 ### Tracking Mouse and Key Input
