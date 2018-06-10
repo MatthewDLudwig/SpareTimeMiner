@@ -1,4 +1,4 @@
-package main;
+package core;
 
 class StateMachine {
 	private int[] order;

@@ -1,4 +1,4 @@
-package main;
+package core;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -14,7 +14,7 @@ class StreamConsumer extends Thread {
     private int blocksPassed;
     private int currentBlock;
 
-    // reads everything from is until empty. 
+    // reads everything from "is" until empty. 
     StreamConsumer(InputStream is) {
         this.is = is;
 		shouldStop = false;
@@ -49,26 +49,27 @@ class StreamConsumer extends Thread {
             	if (hashRate != -1) {
             		int endIndex = line.indexOf(' ', hashRate + hashCheck.length());
             		String part = line.substring(hashRate + hashCheck.length(), endIndex == -1 ? line.length() - 1 : endIndex);
-            		if (part.matches("[0-9]{1,10}")) {
+            		
+            		try {
             			float value = Float.parseFloat(part);
-            			averageRate.updateAverage(value);            			
-            		}
+            			averageRate.updateAverage(value);   
+            		} catch (NumberFormatException e) { }    			
             	}
             	
             	if (balance != -1) {
             		int endIndex = line.indexOf(' ', balance + balanceCheck.length());
             		String part = line.substring(balance + balanceCheck.length(), endIndex == -1 ? line.length() - 1 : endIndex);
-            		if (part.matches("[0-9]{1,10}")) {
+            		try {
 	            		float value = Float.parseFloat(part);
 	            		currentBalance = value;
-            		}
+            		} catch (NumberFormatException e) { }
             	}
             	
             	if (block != -1) {
             		int endIndex = line.indexOf(' ', block + blockCheck.length());
             		String part = line.substring(block + blockCheck.length(), endIndex == -1 ? line.length() - 1 : endIndex);
             		
-            		if (part.matches("[0-9]{1,10}")) {
+            		try {
 	            		int value = Integer.parseInt(part);
 	            		if (currentBlock == 0) {
 	            			currentBlock = value;
@@ -76,7 +77,7 @@ class StreamConsumer extends Thread {
 	            			blocksPassed += (value - currentBlock);
 	            			currentBlock = value;
 	            		}
-            		}
+            		} catch (NumberFormatException e) { }
             	}
 
                 if (shouldStop) {

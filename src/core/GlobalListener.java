@@ -1,6 +1,4 @@
-package main;
-import javax.sound.sampled.LineUnavailableException;
-
+package core;
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
 import org.jnativehook.mouse.NativeMouseEvent;
@@ -22,6 +20,10 @@ public class GlobalListener implements NativeKeyListener, NativeMouseInputListen
 		exitTracker = new StateMachine(exit);
 		movieTracker = new StateMachine(movie);
 		forceTracker = new StateMachine(force);
+	}
+	
+	public boolean isMovieMode() {
+		return movieMode;
 	}
 		
 	public int takeCount() {
@@ -55,40 +57,36 @@ public class GlobalListener implements NativeKeyListener, NativeMouseInputListen
 			}
 		}
 		
-		try {
-			if (number != 0) {
-				if (this.exitTracker.checkCurrent(number)) {
-					Main.running = false;
-	
-					if (Main.beepLevel > 1) {
-						Main.playSound(300, 150, 100);
-						Main.playSound(500, 150, 100);
-						Main.playSound(300, 150, 100);
-					}
-				}
-				
-				if (this.movieTracker.checkCurrent(number)) {
-					this.movieMode = !this.movieMode;
-	
-					if (Main.beepLevel > 1) {
-						Main.playSound(500, 150, 100);
-						Main.playSound(500, 150, 100);
-						Main.playSound(300, 150, 100);
-					}
-				}
-				
-				if (this.forceTracker.checkCurrent(number)) {
-					Main.forceCheck = true;
-	
-					if (Main.beepLevel > 1) {
-						Main.playSound(400, 150, 100);
-						Main.playSound(250, 150, 100);
-						Main.playSound(600, 150, 100);						
-					}
+		if (number != 0) {
+			if (this.exitTracker.checkCurrent(number)) {
+				Main.running = false;
+
+				if (Main.beepLevel > 1) {
+					Main.playSound(300, 150, 100);
+					Main.playSound(500, 150, 100);
+					Main.playSound(300, 150, 100);
 				}
 			}
-		} catch (LineUnavailableException err) {
-			err.printStackTrace();
+			
+			if (this.movieTracker.checkCurrent(number)) {
+				this.movieMode = !this.movieMode;
+
+				if (Main.beepLevel > 1) {
+					Main.playSound(500, 150, 100);
+					Main.playSound(500, 150, 100);
+					Main.playSound(300, 150, 100);
+				}
+			}
+			
+			if (this.forceTracker.checkCurrent(number)) {
+				Main.forceCheck = true;
+
+				if (Main.beepLevel > 1) {
+					Main.playSound(400, 150, 100);
+					Main.playSound(250, 150, 100);
+					Main.playSound(600, 150, 100);						
+				}
+			}
 		}
 		
 		counter++;

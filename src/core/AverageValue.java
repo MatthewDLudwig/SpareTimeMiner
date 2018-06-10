@@ -1,4 +1,4 @@
-package main;
+package core;
 
 public class AverageValue {
 	private float average;

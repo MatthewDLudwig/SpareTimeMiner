@@ -1,4 +1,4 @@
-package main;
+package core;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -6,6 +6,10 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,58 +23,99 @@ import org.jnativehook.GlobalScreen;
 import org.jnativehook.NativeHookException;
 
 public class Main {
+	public static String[] modeStrings = { "Tiny", "Light", "Heavy" };
+	
+	public static Runtime globalRuntime;
+	public static SimpleDateFormat globalTimeFormat;
+	
 	public static boolean running = true;
 	public static boolean forceCheck = false;
 	public static int beepLevel = 2;
 	
-	private static Process minerProcess;
-	private static StreamConsumer consumer;
+	public static StreamConsumer consumer;
 	
-	public static void playSound(float hz, float time, float volume) throws LineUnavailableException {
-		float frequency = 44100;
-		byte[] buf = new byte[1];
-	    AudioFormat af = new AudioFormat(frequency, 8, 1, true, false);
-	    SourceDataLine sdl = AudioSystem.getSourceDataLine(af);
-	    
-	    sdl.open();
-	    sdl.start();
-	    for (int i = 0; i < 250 * frequency / 1000; i++) {
-	        double angle = i / (frequency / hz) * 2.0 * Math.PI;
-	        buf[0] = (byte) (Math.sin(angle) * volume);
+	public static void playSound(float hz, float time, float volume) {
+		try {
+			float frequency = 44100;
+			byte[] buf = new byte[1];
+			AudioFormat af = new AudioFormat(frequency, 8, 1, true, false);
+			SourceDataLine sdl = AudioSystem.getSourceDataLine(af);
+			
+			sdl.open();
+			sdl.start();
+			for (int i = 0; i < 250 * frequency / 1000; i++) {
+				double angle = i / (frequency / hz) * 2.0 * Math.PI;
+				buf[0] = (byte) (Math.sin(angle) * volume);
+				
+				sdl.write(buf, 0, 1);
+			}
+			sdl.drain();
+			sdl.stop();
+		} catch(LineUnavailableException e) {
+			System.err.println("Unable to play beeps, line unavailable!");
+		}
+	}
+	
+	public static void checkForMiner() throws IOException {
+		Process findMiner;
 
-	        sdl.write(buf, 0, 1);
+	    if (System.getProperty("os.name").startsWith("Windows")) {
+		    findMiner = Main.globalRuntime.exec("tasklist.exe");
+	    } else {
+	    	findMiner = Main.globalRuntime.exec("ps -aux");
 	    }
-	    sdl.drain();
-	    sdl.stop();
-	}
-	
-	
-	public static void runCommand(Runtime r, String command) throws IOException, InterruptedException {
-		TimeUnit.SECONDS.sleep(5);
-		minerProcess = r.exec(command);
-		
-		consumer = new StreamConsumer(minerProcess.getInputStream());
-		consumer.setDaemon(true);
-		consumer.start();
-	}
-	
-	public static void main(String[] args) throws LineUnavailableException {	  
-        playSound(500, 150, 0);
+        BufferedReader minerReader = new BufferedReader(new InputStreamReader(findMiner.getInputStream()));
+        String minerLine = null;
+        while ( (minerLine = minerReader.readLine()) != null) {
+        	if (minerLine.contains("miner")) {
+        		System.out.println(minerLine);
+        		System.err.println("The Nimiq miner is most likely already running!");
+        		System.err.println("If this is a mistake, please change your config file.");
+        		System.exit(-3);
+        	}
+        }
 
-		String[] modeStrings = { "Tiny", "Light", "Heavy" };
+        minerReader.close();
+	}
+	
+	public static Process runCommand(String command) {
+		Process p = null;
 		
-		String tinyCommand = "", lightCommand = "", heavyCommand = "";
-		int recheckFrequency = 20;
+		try {
+			TimeUnit.SECONDS.sleep(5);
+			p = Main.globalRuntime.exec(command);
+			
+			consumer = new StreamConsumer(p.getInputStream());
+			consumer.setDaemon(true);
+			consumer.start();
+		} catch (Exception e) {
+			System.err.println("Failed to run the command: \"" + command + "\"");
+			System.exit(-1);
+		}
+		
+		return p;
+	}
+	
+	public static String getTheTime() {
+		return Main.globalTimeFormat.format(new Date());
+	}
+	
+	public static void main(String[] args) {	
+		Main.globalRuntime = Runtime.getRuntime();
+		Main.globalTimeFormat = new SimpleDateFormat("HH:mm");
+
 		int[] comboExit = {3, 6, 9};
 		int[] comboMovie = {7, 8, 9};
 		int[] comboForce = {1, 2, 3};
-		int counterTime = 15;
-		
-		int currentMode = 0;
 		int interactionBias = 60;
 		int biasStrength = 5;
-		int lastAverage = 0;
-		AverageValue cumulativeHashRate = new AverageValue(0, 0);
+		
+		String tinyCommand = "", lightCommand = "", heavyCommand = "";
+		int recheckFrequency = 20;
+		int counterTime = 15;	
+		int startingMode = 0;
+		boolean activityMode = true;
+		List<TimeSlot> slots = new LinkedList<TimeSlot>();
 		
 		try {
 			File configFile = new File("SpareMiner.config");
@@ -125,11 +170,11 @@ public class Main {
             			}
             		} else if (key.equals("initial")) {
             			if (value.equals("0") || value.equalsIgnoreCase("tiny")) {
-            				currentMode = 0;
+            				startingMode = 0;
             			} else if (value.equals("1") || value.equalsIgnoreCase("light")) {
-            				currentMode = 1;
+            				startingMode = 1;
             			} else if (value.equals("2") || value.equalsIgnoreCase("heavy")) {
-            				currentMode = 2;
+            				startingMode = 2;
             			} else {
             				System.err.println("Unrecognized value for key 'initial': " + value);
             				throw new IOException();
@@ -146,6 +191,38 @@ public class Main {
                     	}
             		} else if (key.equals("counter")) {
                 		counterTime = Integer.parseInt(value);
+            		} else if (key.equals("check")) {
+            			if (value.equalsIgnoreCase("activity")) {
+            				activityMode = true;
+            			} else if (value.equalsIgnoreCase("time")) {
+            				activityMode = false;
+             			} else {
+             				System.err.println("Unrecognized value for key 'check': " + value);
+             				throw new IOException();
+             			}            		
+            		} else if (key.equals("times")) {
+            			String[] pieces = value.split(",");
+            			
+            			for (int i = 0; i < pieces.length; i++) {
+            				String[] times = pieces[i].split("-");
+            				
+            				if (times[0].equalsIgnoreCase("tiny") || times[0].equalsIgnoreCase("light") || times[0].equalsIgnoreCase("heavy")) {
+            					TimeStore start = new TimeStore(times[1]);
+            					TimeStore end = new TimeStore(times[2]);
+            					
+            					if (!start.isNextTime(end)) {
+            						System.err.println("Non-sequential times given for: " + pieces[i]);
+            						throw new IOException();
+            					} else {
+            						slots.add(new TimeSlot(times[0], start, end));
+            					}            					
+            				} else {
+        						System.err.println("Invalid time slot name: " + times[0]);
+        						throw new IOException();
+            				}
+            			}
+            			
+            			System.out.println("# of time slots found: " + slots.size());
             		} else {
             			System.err.println("Unrecognized key: '" + key + "'");
             		}
@@ -161,34 +238,14 @@ public class Main {
 			System.exit(-2);
 		}
 		
-		if (tinyCommand.isEmpty() || lightCommand.isEmpty() || heavyCommand.isEmpty()) {
-			System.err.println("Config file is missing one of the 3 required miner commands (tiny, light, or heavy).");
-			System.exit(-2);
-		}
-		
-		String[] allCommands = new String[]{ tinyCommand, lightCommand, heavyCommand };
-				
-		try {
-			Runtime r = Runtime.getRuntime();
-			Process findMiner;
-
-		    if (System.getProperty("os.name").startsWith("Windows")) {
-			    findMiner = r.exec("tasklist.exe");
-		    } else {
-		    	findMiner = r.exec("ps -aux");
-		    }
-            BufferedReader minerReader = new BufferedReader(new InputStreamReader(findMiner.getInputStream()));
-            String minerLine = null;
-            while ( (minerLine = minerReader.readLine()) != null) {
-            	if (minerLine.contains("miner")) {
-            		System.err.println("The Nimiq miner is most likely already running!");
-            		System.err.println("If this is a mistake, please change your config file.");
-            		System.exit(-3);
-            	}
-            }
-
-            minerReader.close();
-            
+        Main.playSound(500, 150, 0);
+        
+        MainObject obj = new MainObject();
+        
+		try {            
+	        Main.checkForMiner();
+	        obj.initialize(tinyCommand, lightCommand, heavyCommand, recheckFrequency, counterTime, startingMode, activityMode, slots);
+	        
             if (Main.beepLevel > 0) {
             	playSound(400, 150, 100);
             	playSound(500, 150, 100);
@@ -198,94 +255,25 @@ public class Main {
 			Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
 			logger.setUseParentHandlers(false);
 			logger.setLevel(Level.WARNING);
-			runCommand(r, currentMode == 0 ? tinyCommand : currentMode == 1 ? lightCommand : heavyCommand);
 			
 			GlobalScreen.registerNativeHook();
 			GlobalListener ex = new GlobalListener(interactionBias, biasStrength, comboExit, comboMovie, comboForce);
 			GlobalScreen.addNativeKeyListener(ex);
 			GlobalScreen.addNativeMouseListener(ex);
 
-			int sleepCounter = 0;
 			while (Main.running) {
-				System.out.println("{ " + modeStrings[currentMode] + " " + sleepCounter + "/" + recheckFrequency + " } - " + consumer.currentDescription());
-				cumulativeHashRate.updateAverage(consumer.getAverageRate());
-				TimeUnit.SECONDS.sleep(counterTime);
-				sleepCounter++;
-				
-				if (forceCheck || sleepCounter >= recheckFrequency) {
-					forceCheck = false;
-					sleepCounter = 0;
-					
-					int count = ex.takeCount();
-					lastAverage = ex.getAverage();
-					
-					if (count < recheckFrequency) { //Less than 1 input every 15 seconds is considered AFK or close enough.
-						if (currentMode != 2 && !allCommands[currentMode].equals(allCommands[2])) {
-							System.out.println("{ STATUS } Switching to heavy miner!");
-
-				            if (Main.beepLevel > 2) {
-				            	playSound(150, 150, 100);
-				            	playSound(150, 150, 100);
-				            	playSound(150, 150, 100);            	
-				            }
-							
-							currentMode = 2;
-							consumer.shouldStop = true;						
-							minerProcess.destroy();
-							
-							runCommand(r, heavyCommand);
-						}
-					} else if (count < lastAverage) { //Less than the average is considered light use.
-						if (currentMode != 1 && !allCommands[currentMode].equals(allCommands[1])) {
-							System.out.println("{ STATUS } Switching to light miner!");
-
-				            if (Main.beepLevel > 2) {
-				            	playSound(500, 150, 100);
-				            	playSound(500, 150, 100);
-				            	playSound(500, 150, 100);            	
-				            }
-
-							currentMode = 1;
-							consumer.shouldStop = true;
-							minerProcess.destroy();
-							
-							runCommand(r, lightCommand);
-						}
-					} else { //Anything above the average is considered heavy use of the computer and so the miner is turned down.
-						if (currentMode != 0 && !allCommands[currentMode].equals(allCommands[0])) {
-							System.out.println("{ STATUS } Switching to tiny miner!");
-
-				            if (Main.beepLevel > 2) {
-				            	playSound(700, 150, 100);
-				            	playSound(700, 150, 100);
-				            	playSound(700, 150, 100);            	
-				            }
-
-							currentMode = 0;						
-							consumer.shouldStop = true;
-							minerProcess.destroy();
-							
-							runCommand(r, tinyCommand);
-						}
-					}
-				}
+				obj.runLogic(ex);
 			}
 			
 			GlobalScreen.unregisterNativeHook();
 			consumer.shouldStop = true;
-			minerProcess.destroy();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+			obj.destroy();
 		} catch (NativeHookException e) {
 			System.err.println("There was a problem registering the native hook.");
 			System.err.println(e.getMessage());
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		
-		System.out.println("SpareMiner stopped with stats:");
-		System.out.println("\tAverage interactions: " + lastAverage);
-		System.out.println("\tAverage hash rate: " + cumulativeHashRate.getAverage());
 
 		if (Main.beepLevel > 0) {
 			playSound(600, 150, 100);
